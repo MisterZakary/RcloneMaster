@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
+	"path/filepath" // 确保导入了 filepath
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +18,15 @@ var (
 	TaskList    []TaskConfig
 	debounceMap sync.Map
 )
+
+// 新增辅助函数：获取可执行文件所在的目录
+func getExeDir() string {
+	ex, err := os.Executable()
+	if err != nil {
+		return "." // 报错则退回到当前目录
+	}
+	return filepath.Dir(ex)
+}
 
 func main() {
 	loadConfig()
@@ -51,24 +60,41 @@ func main() {
 }
 
 func loadConfig() {
+	// 关键修改：获取 EXE 所在的绝对路径
+	exeDir := getExeDir()
+	mainConfigPath := filepath.Join(exeDir, "rcloneMaster.yaml")
+
 	v := viper.New()
-	v.SetConfigFile("rcloneMaster.yaml")
+	v.SetConfigFile(mainConfigPath)
 	if err := v.ReadInConfig(); err != nil {
-		ShowMsg("启动失败", "无法找到主配置 rcloneMaster.yaml", true)
+		// 如果主配置都找不到，弹窗并退出
+		ShowMsg("启动失败", "无法找到主配置: "+mainConfigPath, true)
 		os.Exit(1)
 	}
 
+	// 检查重定向 (master_config_path)
+	// 注意：如果重定向路径是相对路径，我们同样让它相对于 exeDir
 	masterPath := v.GetString("global.master_config_path")
 	if masterPath != "" {
-		v.SetConfigFile(ExpandPath(masterPath))
+		finalMasterPath := ExpandPath(masterPath)
+		if !filepath.IsAbs(finalMasterPath) {
+			finalMasterPath = filepath.Join(exeDir, finalMasterPath)
+		}
+		v.SetConfigFile(finalMasterPath)
 		v.ReadInConfig()
 	}
 	v.UnmarshalKey("global", &GlobalCfg)
 
+	// 加载任务清单 (task_config_path)
 	vt := viper.New()
-	vt.SetConfigFile(ExpandPath(GlobalCfg.TaskConfigPath))
+	finalTaskPath := ExpandPath(GlobalCfg.TaskConfigPath)
+	if !filepath.IsAbs(finalTaskPath) {
+		finalTaskPath = filepath.Join(exeDir, finalTaskPath)
+	}
+
+	vt.SetConfigFile(finalTaskPath)
 	if err := vt.ReadInConfig(); err != nil {
-		ShowMsg("配置错误", "无法加载任务文件: "+GlobalCfg.TaskConfigPath, true)
+		ShowMsg("配置错误", "无法加载任务文件: "+finalTaskPath, true)
 		os.Exit(1)
 	}
 	vt.UnmarshalKey("tasks", &TaskList)
