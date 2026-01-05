@@ -1,0 +1,16 @@
+global:
+  # [可选] 重定向主配置。若为空，则直接使用本文件作为主配置
+  master_config_path: "" 
+
+  # rclone.exe 绝对路径
+  rclone_path: "D:/CloudSoft/CMDTools/Tools/rclone.exe"
+  
+  # 任务配置文件 task.yaml 的绝对路径
+  task_config_path: "D:/UsersData/Zakary/Documents/rcloneMaster/task.yaml"
+
+  # 日志与临时目录
+  log_dir: "D:/UsersData/Zakary/Documents/rcloneMaster/logs"
+  temp_dir: "D:/UsersData/Zakary/Documents/rcloneMaster/temp"
+
+  # 默认验证等级 (0:退出码, 1:大小比对, 2:Hash校验)
+  default_verify_level: 1
